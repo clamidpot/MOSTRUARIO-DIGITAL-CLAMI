@@ -335,6 +335,26 @@ document.querySelector('.fornecedor-todas').addEventListener('change', function(
     });
 });
 </script>
+<script>
+/* CONTROLE DO CARROSSEL */
+document.querySelectorAll('.arrow').forEach(arrow => {
+    arrow.addEventListener('click', () => {
+
+        const marca = arrow.dataset.marca;
+        const carousel = document.getElementById(`carousel-${marca}`);
+
+        if (!carousel) return;
+
+        const scrollAmount = 270; // tamanho de um card + gap
+
+        if (arrow.classList.contains('arrow-left')) {
+            carousel.scrollLeft -= scrollAmount;
+        } else {
+            carousel.scrollLeft += scrollAmount;
+        }
+    });
+});
+</script>
 
 </body>
 </html>

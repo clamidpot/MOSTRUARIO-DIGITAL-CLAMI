@@ -1,5 +1,6 @@
 import pandas as pd
 from flask import Flask, request, render_template, send_file
+import os
 from datetime import datetime
 import unicodedata
 import io
@@ -102,63 +103,80 @@ def remover_acentos(txt):
     return ''.join(c for c in unicodedata.normalize('NFD', txt) if unicodedata.category(c) != 'Mn')
 
 # ------------------------------------------
-# Carregar Excel — automático
+# Cache automático do Excel (SIMPLES)
 # ------------------------------------------
-arquivo = "data/CATALAGO MOSTRUARIO DIGITAL.xlsx"
-todas_abas = pd.read_excel(arquivo, sheet_name=None)
+BASE_DIR = r"P:\22_MOSTRUARIO DIGITAL CLAMI"
+arquivo = os.path.join(BASE_DIR, "data", "CATALAGO MOSTRUARIO DIGITAL.xlsx")
+_ultima_modificacao = None
+_df_produtos_cache = None
+_df_fornecedores_cache = None
 
-produtos_key = None
-for k in todas_abas.keys():
-    if str(k).strip().lower() == "produtos":
-        produtos_key = k
-        break
-if not produtos_key:
-    produtos_key = list(todas_abas.keys())[0]
+def carregar_dados():
+    global _ultima_modificacao, _df_produtos_cache, _df_fornecedores_cache
 
-df_produtos = todas_abas[produtos_key].copy()
+    mod = os.path.getmtime(arquivo)
 
-lista_fornecedores = []
-for nome, df in todas_abas.items():
-    if nome == produtos_key:
-        continue
-    if df is None or df.empty:
-        continue
-    lista_fornecedores.append(df.copy())
+    if _ultima_modificacao == mod and _df_produtos_cache is not None:
+        return _df_produtos_cache, _df_fornecedores_cache
 
-if lista_fornecedores:
-    df_fornecedores = pd.concat(lista_fornecedores, ignore_index=True, sort=False)
-else:
-    df_fornecedores = pd.DataFrame()
+    todas_abas = pd.read_excel(arquivo, sheet_name=None)
 
-df_produtos.columns = df_produtos.columns.astype(str).str.strip().str.upper()
-df_fornecedores.columns = df_fornecedores.columns.astype(str).str.strip().str.upper()
+    produtos_key = None
+    for k in todas_abas.keys():
+        if str(k).strip().lower() == "produtos":
+            produtos_key = k
+            break
+    if not produtos_key:
+        produtos_key = list(todas_abas.keys())[0]
 
-for c in ["FORNECEDOR", "MARCA", "PRODUTO"]:
-    if c in df_produtos.columns:
-        df_produtos[c] = df_produtos[c].ffill()
+    df_produtos = todas_abas[produtos_key].copy()
 
-for col in ["FORNECEDOR", "MARCA", "PRODUTO", "ACABAMENTO", "IMAGEM PRODUTO"]:
-    if col in df_produtos.columns:
-        df_produtos[col] = df_produtos[col].apply(lambda x: "" if pd.isna(x) else str(x).strip())
+    lista_fornecedores = []
+    for nome, df in todas_abas.items():
+        if nome == produtos_key or df is None or df.empty:
+            continue
+        lista_fornecedores.append(df.copy())
 
-df_produtos["FORNECEDOR_STR"] = df_produtos["FORNECEDOR"].apply(normaliza_fornecedor_to_str) if "FORNECEDOR" in df_produtos.columns else ""
+    df_fornecedores = (
+        pd.concat(lista_fornecedores, ignore_index=True, sort=False)
+        if lista_fornecedores else pd.DataFrame()
+    )
 
-if not df_fornecedores.empty and "FORNECEDOR" in df_fornecedores.columns:
-    df_fornecedores["FORNECEDOR_STR"] = df_fornecedores["FORNECEDOR"].apply(normaliza_fornecedor_to_str)
-else:
-    if not df_fornecedores.empty:
-        candidates = [c for c in df_fornecedores.columns if "FORNECEDOR" in c.upper()]
-        if candidates:
-            first = candidates[0]
-            df_fornecedores["FORNECEDOR_STR"] = df_fornecedores[first].apply(normaliza_fornecedor_to_str)
-        else:
-            df_fornecedores["FORNECEDOR_STR"] = ""
+    # Normalizações (iguais às suas)
+    df_produtos.columns = df_produtos.columns.astype(str).str.strip().str.upper()
+    df_fornecedores.columns = df_fornecedores.columns.astype(str).str.strip().str.upper()
+
+    for c in ["FORNECEDOR", "MARCA", "PRODUTO"]:
+        if c in df_produtos.columns:
+            df_produtos[c] = df_produtos[c].ffill()
+
+    for col in ["FORNECEDOR", "MARCA", "PRODUTO", "ACABAMENTO", "IMAGEM PRODUTO"]:
+        if col in df_produtos.columns:
+            df_produtos[col] = df_produtos[col].apply(
+                lambda x: "" if pd.isna(x) else str(x).strip()
+            )
+
+    if "FORNECEDOR" in df_produtos.columns:
+        df_produtos["FORNECEDOR_STR"] = df_produtos["FORNECEDOR"].apply(normaliza_fornecedor_to_str)
+
+    if not df_fornecedores.empty and "FORNECEDOR" in df_fornecedores.columns:
+        df_fornecedores["FORNECEDOR_STR"] = df_fornecedores["FORNECEDOR"].apply(normaliza_fornecedor_to_str)
+
+    _ultima_modificacao = mod
+    _df_produtos_cache = df_produtos
+    _df_fornecedores_cache = df_fornecedores
+
+    print("📊 Excel recarregado automaticamente")
+
+    return df_produtos, df_fornecedores
+
 
 # ------------------------------------------
 # ROTA PRODUTOS
 # ------------------------------------------
 @app.route("/produtos")
 def produtos():
+    df_produtos, df_fornecedores = carregar_dados()
     termo = request.args.get("pesquisa_acabamento", "").strip()
     termo_norm = remover_acentos(termo).lower()
     df = df_produtos.copy()
@@ -199,37 +217,102 @@ def produtos():
 # ------------------------------------------
 @app.route("/produto/<nome>")
 def detalhes(nome):
+    df_produtos, df_fornecedores = carregar_dados()
+
+    # -----------------------------
+    # Busca produto
+    # -----------------------------
     df_item = df_produtos[df_produtos["PRODUTO"] == nome]
 
     if df_item.empty:
-        mask = df_produtos["PRODUTO"].astype(str).str.strip().str.lower() == str(nome).strip().lower()
+        mask = (
+            df_produtos["PRODUTO"]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+            == str(nome).strip().lower()
+        )
         df_item = df_produtos[mask]
 
     if df_item.empty:
         return f"Produto '{nome}' não encontrado."
 
     item = df_item.iloc[0]
-    fornecedor_raw = item.get("FORNECEDOR", "")
-    fornecedor = normaliza_fornecedor_to_str(fornecedor_raw)
+
+    fornecedor = normaliza_fornecedor_to_str(item.get("FORNECEDOR", ""))
     marca = item.get("MARCA", "") if "MARCA" in item else ""
 
+    # -----------------------------
+    # Imagens do produto
+    # -----------------------------
     imagens_produto = []
-    if "IMAGEM PRODUTO" in df_item.columns:
-        imagens_produto = df_item["IMAGEM PRODUTO"].dropna().unique().tolist()
-        imagens_produto = [caminho_para_static(x) for x in imagens_produto if caminho_para_static(x)]
 
-    if not df_fornecedores.empty:
-        df_f_copy = df_fornecedores.copy()
-        if "FORNECEDOR_STR" not in df_f_copy.columns and "FORNECEDOR" in df_f_copy.columns:
-            df_f_copy["FORNECEDOR_STR"] = df_f_copy["FORNECEDOR"].apply(normaliza_fornecedor_to_str)
-        acabamentos_fornecedor = df_f_copy[df_f_copy["FORNECEDOR_STR"] == fornecedor].copy()
-    else:
+    if "IMAGEM PRODUTO" in df_item.columns:
+        imagens_produto = (
+            df_item["IMAGEM PRODUTO"]
+            .dropna()
+            .unique()
+            .tolist()
+        )
+        imagens_produto = [
+            caminho_para_static(x)
+            for x in imagens_produto
+            if caminho_para_static(x)
+        ]
+
+    # -----------------------------
+    # Se não existir planilha de fornecedores
+    # -----------------------------
+    if df_fornecedores.empty:
         acabamentos_fornecedor = pd.DataFrame()
 
+    else:
+        df_f_copy = df_fornecedores.copy()
+
+        if "FORNECEDOR_STR" not in df_f_copy.columns and "FORNECEDOR" in df_f_copy.columns:
+            df_f_copy["FORNECEDOR_STR"] = df_f_copy["FORNECEDOR"].apply(
+                normaliza_fornecedor_to_str
+            )
+
+        # -----------------------------
+        # Tipos de acabamento permitidos para o produto
+        # -----------------------------
+        tipos_permitidos = []
+
+        if "ACABAMENTO" in df_item.columns:
+            tipos_permitidos = (
+                df_item["ACABAMENTO"]
+                .dropna()
+                .astype(str)
+                .str.strip()
+                .replace("", pd.NA)
+                .dropna()
+                .unique()
+                .tolist()
+            )
+
+        # -----------------------------
+        # Filtra acabamentos do fornecedor
+        # -----------------------------
+        acabamentos_fornecedor = df_f_copy[
+            (df_f_copy["FORNECEDOR_STR"] == fornecedor) &
+            (df_f_copy["ACABAMENTO"]
+                .astype(str)
+                .str.strip()
+                .isin(tipos_permitidos)
+            )
+        ].copy()
+
+    # -----------------------------
+    # Organiza por categoria
+    # -----------------------------
     categorias = {}
-    for idx, row in acabamentos_fornecedor.iterrows():
+
+    for _, row in acabamentos_fornecedor.iterrows():
+
         categoria_raw = get_row_value(row, "TIPO DE ACABAMENTO", "TIPO_ACABAMENTO")
         categoria = limpa(categoria_raw) or "OUTROS"
+
         if categoria not in categorias:
             categorias[categoria] = []
 
@@ -237,15 +320,25 @@ def detalhes(nome):
         tipo_val = limpa(get_row_value(row, "TIPO DE ACABAMENTO", "TIPO_ACABAMENTO"))
         comp_val = limpa(get_row_value(row, "COMPOSIÇÃO", "COMPOSICAO"))
         status_val = limpa(get_row_value(row, "STATUS"))
-        status_data_fmt = format_status_data(get_row_value(row, "STATUS_DATA", "STATUS DATA"))
+        status_data_fmt = format_status_data(
+            get_row_value(row, "STATUS_DATA", "STATUS DATA")
+        )
         restr_val = limpa(get_row_value(row, "RESTRIÇÃO", "RESTRICAO"))
-        info_val = limpa(get_row_value(row, "INFORMACAO_COMPLEMENTAR", "INFORMAÇÃO COMPLEMENTAR"))
+        info_val = limpa(
+            get_row_value(row, "INFORMACAO_COMPLEMENTAR", "INFORMAÇÃO COMPLEMENTAR")
+        )
         img_val = limpa(get_row_value(row, "IMAGEM ACABAMENTO", "IMAGEM"))
 
         st_norm = status_val.lower().strip()
-        for a,b in [("í","i"),("é","e"),("ó","o"),("ú","u"),("ã","a"),("õ","o"),("â","a"),("ê","e")]:
-            st_norm = st_norm.replace(a,b)
-        if st_norm in ["indisponivel", "indisponível"]:
+
+        for a, b in [
+            ("í", "i"), ("é", "e"), ("ó", "o"),
+            ("ú", "u"), ("ã", "a"), ("õ", "o"),
+            ("â", "a"), ("ê", "e")
+        ]:
+            st_norm = st_norm.replace(a, b)
+
+        if st_norm == "indisponivel":
             status_cor = "#FF0000"
         elif st_norm == "suspenso":
             status_cor = "#D4A017"
@@ -266,22 +359,37 @@ def detalhes(nome):
             "IMG": caminho_para_static(img_val) if img_val else ""
         })
 
-    acabamentos_lista = (
-        acabamentos_fornecedor["ACABAMENTO"]
-        .dropna()
-        .astype(str)
-        .str.strip()
-        .replace("", pd.NA)
-        .dropna()
-        .unique()
-        .tolist()
-    ) if "ACABAMENTO" in acabamentos_fornecedor.columns else []
+    # -----------------------------
+    # Lista simples de acabamentos
+    # -----------------------------
+    if "ACABAMENTO" in acabamentos_fornecedor.columns:
+        acabamentos_lista = (
+            acabamentos_fornecedor["ACABAMENTO"]
+            .dropna()
+            .astype(str)
+            .str.strip()
+            .replace("", pd.NA)
+            .dropna()
+            .unique()
+            .tolist()
+        )
+    else:
+        acabamentos_lista = []
 
+    # -----------------------------
+    # Última atualização
+    # -----------------------------
     ultima_atualizacao = "Data não disponível"
+
     if "ULTIMA_ATUALIZACAO" in acabamentos_fornecedor.columns:
         try:
-            series_datas = acabamentos_fornecedor["ULTIMA_ATUALIZACAO"].astype(str).replace("", pd.NA)
+            series_datas = (
+                acabamentos_fornecedor["ULTIMA_ATUALIZACAO"]
+                .astype(str)
+                .replace("", pd.NA)
+            )
             parsed = parse_datas_variadas(series_datas)
+
             if parsed.notna().any():
                 ultima_data = parsed.max()
                 if pd.notna(ultima_data):
@@ -289,7 +397,11 @@ def detalhes(nome):
         except:
             pass
 
+    # -----------------------------
+    # Status coletados
+    # -----------------------------
     status_coletados = []
+
     if "STATUS" in acabamentos_fornecedor.columns:
         for s in acabamentos_fornecedor["STATUS"].dropna().unique().tolist():
             s2 = str(s).strip()
@@ -298,6 +410,9 @@ def detalhes(nome):
                 if key not in status_coletados:
                     status_coletados.append(key)
 
+    # -----------------------------
+    # Render
+    # -----------------------------
     return render_template(
         "produto.html",
         nome=nome,
@@ -309,56 +424,133 @@ def detalhes(nome):
         ultima_modificacao=ultima_atualizacao,
         status_coletados=status_coletados
     )
+
 # ------------------------------------------
 # ROTA DOWNLOAD PDF – ACABAMENTOS
 # ------------------------------------------
 @app.route("/download/<nome>")
 def download(nome):
-    # ---------------------------
-    # Reutiliza exatamente a lógica do /produto/<nome>
-    # ---------------------------
+    df_produtos, df_fornecedores = carregar_dados()
+
+    # -----------------------------
+    # Busca produto
+    # -----------------------------
     df_item = df_produtos[df_produtos["PRODUTO"] == nome]
 
     if df_item.empty:
-        mask = df_produtos["PRODUTO"].astype(str).str.strip().str.lower() == str(nome).strip().lower()
+        mask = (
+            df_produtos["PRODUTO"]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+            == str(nome).strip().lower()
+        )
         df_item = df_produtos[mask]
 
     if df_item.empty:
         return f"Produto '{nome}' não encontrado."
 
     item = df_item.iloc[0]
+
     fornecedor = normaliza_fornecedor_to_str(item.get("FORNECEDOR", ""))
     marca = item.get("MARCA", "") if "MARCA" in item else ""
 
+    # -----------------------------
+    # Imagens do produto
+    # -----------------------------
     imagens_produto = []
-    if "IMAGEM PRODUTO" in df_item.columns:
-        imagens_produto = df_item["IMAGEM PRODUTO"].dropna().unique().tolist()
-        imagens_produto = [caminho_para_static(x) for x in imagens_produto if caminho_para_static(x)]
 
-    if not df_fornecedores.empty:
-        df_f = df_fornecedores.copy()
-        if "FORNECEDOR_STR" not in df_f.columns and "FORNECEDOR" in df_f.columns:
-            df_f["FORNECEDOR_STR"] = df_f["FORNECEDOR"].apply(normaliza_fornecedor_to_str)
-        acabamentos_fornecedor = df_f[df_f["FORNECEDOR_STR"] == fornecedor].copy()
-    else:
+    if "IMAGEM PRODUTO" in df_item.columns:
+        imagens_produto = (
+            df_item["IMAGEM PRODUTO"]
+            .dropna()
+            .unique()
+            .tolist()
+        )
+
+        imagens_produto = [
+            caminho_para_static(x)
+            for x in imagens_produto
+            if caminho_para_static(x)
+        ]
+
+    # -----------------------------
+    # Se não existir fornecedores
+    # -----------------------------
+    if df_fornecedores.empty:
         acabamentos_fornecedor = pd.DataFrame()
 
+    else:
+        df_f_copy = df_fornecedores.copy()
+
+        if "FORNECEDOR_STR" not in df_f_copy.columns and "FORNECEDOR" in df_f_copy.columns:
+            df_f_copy["FORNECEDOR_STR"] = df_f_copy["FORNECEDOR"].apply(
+                normaliza_fornecedor_to_str
+            )
+
+        # -----------------------------
+        # Tipos permitidos do produto
+        # -----------------------------
+        tipos_permitidos = []
+
+        if "ACABAMENTO" in df_item.columns:
+            tipos_permitidos = (
+                df_item["ACABAMENTO"]
+                .dropna()
+                .astype(str)
+                .str.strip()
+                .replace("", pd.NA)
+                .dropna()
+                .unique()
+                .tolist()
+            )
+
+        # -----------------------------
+        # Filtra acabamentos
+        # -----------------------------
+        acabamentos_fornecedor = df_f_copy[
+            (df_f_copy["FORNECEDOR_STR"] == fornecedor) &
+            (df_f_copy["ACABAMENTO"]
+                .astype(str)
+                .str.strip()
+                .isin(tipos_permitidos)
+            )
+        ].copy()
+
+    # -----------------------------
+    # Organiza categorias
+    # -----------------------------
     categorias = {}
+
     for _, row in acabamentos_fornecedor.iterrows():
+
         categoria_raw = get_row_value(row, "TIPO DE ACABAMENTO", "TIPO_ACABAMENTO")
         categoria = limpa(categoria_raw) or "OUTROS"
+
         categorias.setdefault(categoria, [])
 
         acabamento_val = limpa(get_row_value(row, "ACABAMENTO"))
         tipo_val = limpa(get_row_value(row, "TIPO DE ACABAMENTO", "TIPO_ACABAMENTO"))
         comp_val = limpa(get_row_value(row, "COMPOSIÇÃO", "COMPOSICAO"))
         status_val = limpa(get_row_value(row, "STATUS"))
-        status_data_fmt = format_status_data(get_row_value(row, "STATUS_DATA", "STATUS DATA"))
+        status_data_fmt = format_status_data(
+            get_row_value(row, "STATUS_DATA", "STATUS DATA")
+        )
         restr_val = limpa(get_row_value(row, "RESTRIÇÃO", "RESTRICAO"))
-        info_val = limpa(get_row_value(row, "INFORMACAO_COMPLEMENTAR", "INFORMAÇÃO COMPLEMENTAR"))
+        info_val = limpa(
+            get_row_value(row, "INFORMACAO_COMPLEMENTAR", "INFORMAÇÃO COMPLEMENTAR")
+        )
         img_val = limpa(get_row_value(row, "IMAGEM ACABAMENTO", "IMAGEM"))
 
-        st_norm = status_val.lower()
+        st_norm = status_val.lower().strip()
+
+        for a, b in [
+            ("í", "i"), ("é", "e"), ("ó", "o"),
+            ("ú", "u"), ("ã", "a"), ("õ", "o"),
+            ("â", "a"), ("ê", "e")
+        ]:
+            st_norm = st_norm.replace(a, b)
+
         if st_norm == "indisponivel":
             status_cor = "#FF0000"
         elif st_norm == "suspenso":
@@ -366,7 +558,7 @@ def download(nome):
         elif st_norm == "ativo":
             status_cor = "#008000"
         else:
-            status_cor = "#000"
+            status_cor = "black"
 
         categorias[categoria].append({
             "ACABAMENTO": acabamento_val,
@@ -380,70 +572,35 @@ def download(nome):
             "IMG": caminho_para_static(img_val) if img_val else ""
         })
 
-    acabamentos_lista = (
-        acabamentos_fornecedor["ACABAMENTO"]
-        .dropna()
-        .astype(str)
-        .str.strip()
-        .unique()
-        .tolist()
-    ) if "ACABAMENTO" in acabamentos_fornecedor.columns else []
-
-    ultima_atualizacao = "Data não disponível"
-    if "ULTIMA_ATUALIZACAO" in acabamentos_fornecedor.columns:
-        parsed = parse_datas_variadas(acabamentos_fornecedor["ULTIMA_ATUALIZACAO"])
-        if parsed.notna().any():
-            ultima_atualizacao = parsed.max().strftime("%d/%m/%Y")
-
-    status_coletados = []
-    if "STATUS" in acabamentos_fornecedor.columns:
-        status_coletados = sorted(
-            {str(s).strip().lower() for s in acabamentos_fornecedor["STATUS"].dropna()}
-        )
-
-    # ---------------------------
-    # Renderiza HTML → PDF
-    # ---------------------------
+    # -----------------------------
+    # Render PDF HTML
+    # -----------------------------
     html = render_template(
-        "produto.html",   # <-- O MESMO template da tela
+        "pdf_acabamentos.html",
         nome=nome,
         fornecedor=fornecedor,
         marca=marca,
         imagens_produto=imagens_produto,
-        categorias=categorias,
-        acabamentos_lista=acabamentos_lista,
-        ultima_modificacao=ultima_atualizacao,
-        status_coletados=status_coletados,
-        modo_pdf=True     # flag opcional
+        categorias=categorias
     )
 
-    pdf = HTML(
-        string=html,
-        base_url=request.root_url
-    ).write_pdf()
-
-    pdf = HTML(
-        string=html,
-        base_url=request.root_url
-    ).write_pdf()
+    pdf = HTML(string=html).write_pdf()
 
     return Response(
         pdf,
         mimetype="application/pdf",
         headers={
-            "Content-Disposition": f'attachment; filename="{nome}_acabamentos.pdf"',
-            "Content-Length": str(len(pdf)),
-            "Cache-Control": "no-store"
+            "Content-Disposition": f"attachment; filename={nome}.pdf"
         }
     )
-
 
 # ------------------------------------------
 # ROTA INDEX (atualizada com filtros)
 # ------------------------------------------
 @app.route("/", methods=["GET"])
 def index():
-    # Recebe filtros do formulário — agora aceitando múltiplos valores (marca[] / fornecedor[])
+    df_produtos, df_fornecedores = carregar_dados()
+
     marca_filtro = request.args.getlist("marca[]") or []
     fornecedor_filtro = request.args.getlist("fornecedor[]") or []
     pesquisar_produto = request.args.get("pesquisar_produto", "").strip()
@@ -515,4 +672,9 @@ def index():
 # RUN
 # ------------------------------------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=True,
+        use_reloader=False
+    )
