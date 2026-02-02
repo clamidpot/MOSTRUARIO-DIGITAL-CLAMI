@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOSTRUÁRIO DIGITAL</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #fdfdfd;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .header {
+            position: relative;
+            text-align: left;
+            margin-bottom: 25px;
+            padding-top: 60px;
+            padding-left: 10px;
+        }
+
+        .header img {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 80px;
+        }
+
+        h1 {
+            margin: 0 0 15px 0;
+            font-size: 32px;
+        }
+
+        /* === FILTROS (MESMO TAMANHO) === */
+        .filtros {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+            width: 200px;
+        }
+
+        .dropdown button {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 14px;
+            border-radius: 14px;
+            border: 1px solid #ccc;
+            text-align: left;
+            background: #fff;
+            cursor: pointer;
+            box-shadow: 0px 6px 18px rgba(0,0,0,0.25);
+            color: #000;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 100%;
+            box-shadow: 0px 6px 18px rgba(0,0,0,0.25);
+            z-index: 100;
+            border: 1px solid #ccc;
+            border-radius: 14px;
+            padding: 5px 0;
+        }
+
+        .dropdown-content label {
+            display: block;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #000 !important;
+        }
+
+        .dropdown-content label input {
+            accent-color: #000 !important;
+        }
+
+        .dropdown-content label:hover {
+            background-color: #f0f0f0;
+        }
+
+        .dropdown.open .dropdown-content {
+            display: block;
+        }
+
+        .dropdown-content .aplicar-btn {
+            display: block;
+            width: 120px;
+            margin: 10px auto;
+            padding: 6px 0;
+            border: none;
+            border-radius: 10px;
+            background: #000;
+            color: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        /* PESQUISA */
+        .filtros input[type="text"] {
+            padding: 8px 12px;
+            font-size: 14px;
+            border-radius: 14px;
+            border: 1px solid #ccc;
+            width: 200px;
+            box-shadow: 0px 6px 18px rgba(0,0,0,0.25);
+            background: #fff;
+            color: #000;
+        }
+
+        /* AJUSTE MOBILE → TODOS OS CAMPOS IGUAIS */
+        @media (max-width: 600px) {
+            .dropdown,
+            .filtros input[type="text"] {
+                width: 100% !important;   /* <<< AQUI — agora ficam iguais */
+            }
+
+            .header {
+                margin-bottom: 35px;
+                padding-top: 80px;
+            }
+        }
+
+        .marca-titulo {
+            font-size: 17px;
+            margin: 40px 0 10px 5px;
+            font-weight: normal;
+        }
+
+        .carousel-wrapper {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .carousel {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+        }
+
+        .carousel::-webkit-scrollbar {
+            display: none;
+        }
+
+        .arrow {
+            position: absolute;
+            top: 40%;
+            transform: translateY(-50%);
+            background: rgba(0,0,0,0.15);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 20px;
+            color: #000;
+            z-index: 10;
+        }
+
+        .arrow-left { left: -10px; }
+        .arrow-right { right: -10px; }
+
+        .card {
+            min-width: 250px;
+            max-width: 250px;
+            background: white;
+            padding: 12px;
+            border-radius: 0px;
+            text-decoration: none;
+            color: black;
+            box-shadow: 0 0 5px #0003;
+        }
+
+        .card img {
+            width: 100%;
+            height: 200px;
+            object-fit: contain;
+        }
+
+        .card h3 {
+            margin: 10px 0 0 0;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .card .fornecedor {
+            margin: 4px 0 0 0;
+            color: #444;
+            font-size: 13px;
+        }
+
+        .btn-row {
+            display: flex;
+            justify-content: flex-start;
+            margin-top: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 8px;
+            border-radius: 40px;
+            text-align: center;
+            color: #000;
+            font-size: 12px;
+            font-weight: bold;
+            transition: 0.25s ease;
+        }
+    </style>
+</head>
+
+<body>
+<div class="header">
+    <img src="/static/LOGO CLAMI.png" alt="Logo">
+    <h1>MOSTRUÁRIO DIGITAL</h1>
+</div>
+
+<form method="get" class="filtros" id="form-filtros">
+
+    <!-- MARCAS -->
+    <div class="dropdown" id="dropdown-marca">
+        <button type="button">Marcas</button>
+        <div class="dropdown-content">
+            <label>
+                <input type="checkbox" class="marca-todas"> Todas
+            </label>
+
+            {% for m in marcas %}
+            <label>
+                <input type="checkbox" name="marca[]" value="{{ m }}"
+                       {% if marca_selecionada and m in marca_selecionada %}checked{% endif %}>
+                    {{ m }}
+            </label>
+            {% endfor %}
+
+            <button type="submit" class="aplicar-btn">Aplicar</button>
+        </div>
+    </div>
+
+    <!-- FORNECEDORES -->
+    <div class="dropdown" id="dropdown-fornecedor">
+        <button type="button">Código</button>
+        <div class="dropdown-content">
+            <label>
+                <input type="checkbox" class="fornecedor-todas"> Todas
+            </label>
+
+            {% for f in fornecedores|sort(reverse=true) %}
+            <label>
+                <input type="checkbox" name="fornecedor[]" value="{{ f }}"
+                       {% if fornecedor_selecionado and f in fornecedor_selecionado %}checked{% endif %}>
+                    {{ f|int }}
+            </label>
+            {% endfor %}
+
+            <button type="submit" class="aplicar-btn">Aplicar</button>
+        </div>
+    </div>
+
+    <!-- PESQUISAR -->
+    <input type="text" name="pesquisar_produto" placeholder="Pesquisar produto..." value="{{ produto_pesquisado }}">
+</form>
+
+<!-- CARROSSEIS -->
+{% for marcaAtual in marcas %}
+    {% set produtos_marca = produtos | selectattr("marca","equalto",marcaAtual) | list %}
+
+    {% if produtos_marca and (not marca_selecionada or marcaAtual in marca_selecionada) %}
+        <div class="marca-titulo">{{ marcaAtual }}</div>
+
+        <div class="carousel-wrapper">
+            <div class="arrow arrow-left" data-marca="{{ marcaAtual }}">&#10094;</div>
+            <div class="arrow arrow-right" data-marca="{{ marcaAtual }}">&#10095;</div>
+
+            <div class="carousel" id="carousel-{{ marcaAtual }}">
+                {% for p in produtos_marca %}
+                <div class="card">
+                    <img src="{{ p.imagem }}">
+                    <h3>{{ p.nome }}</h3>
+                    <div class="fornecedor">Código: {{ p.fornecedor|int }}</div>
+                    <div class="btn-row">
+                        <a class="btn" href="/produto/{{ p.nome }}">Acabamentos</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+{% endfor %}
+
+<script>
+/* DROPDOWN */
+document.querySelectorAll('.dropdown button').forEach(btn => {
+    btn.addEventListener('click', () => {
+        btn.parentElement.classList.toggle('open');
+    });
+});
+
+/* CLICK FORA */
+document.addEventListener('click', e => {
+    document.querySelectorAll('.dropdown').forEach(drop => {
+        if (!drop.contains(e.target)) drop.classList.remove('open');
+    });
+});
+
+/* TODAS MARCAS */
+document.querySelector('.marca-todas').addEventListener('change', function() {
+    const marcar = this.checked;
+    document.querySelectorAll('#dropdown-marca input[name="marca[]"]').forEach(cb => {
+        cb.checked = marcar;
+    });
+});
+
+/* TODAS FORNECEDORES */
+document.querySelector('.fornecedor-todas').addEventListener('change', function() {
+    const marcar = this.checked;
+    document.querySelectorAll('#dropdown-fornecedor input[name="fornecedor[]"]').forEach(cb => {
+        cb.checked = marcar;
+    });
+});
+</script>
+<script>
+/* CONTROLE DO CARROSSEL */
+document.querySelectorAll('.arrow').forEach(arrow => {
+    arrow.addEventListener('click', () => {
+
+        const marca = arrow.dataset.marca;
+        const carousel = document.getElementById(`carousel-${marca}`);
+
+        if (!carousel) return;
+
+        const scrollAmount = 270; // tamanho de um card + gap
+
+        if (arrow.classList.contains('arrow-left')) {
+            carousel.scrollLeft -= scrollAmount;
+        } else {
+            carousel.scrollLeft += scrollAmount;
+        }
+    });
+});
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+

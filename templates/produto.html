@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ nome }}</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: #fdfdfd;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+*, *:before, *:after { box-sizing: inherit; }
+
+.container { max-width: 1800px; margin: auto; position: relative; }
+
+.logo {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 80px;
+    height: auto;
+}
+.btn-download {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    margin-top: 6px;
+    background: #000;
+    color: #fff;
+    border-radius: 50%;
+    text-decoration: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.btn-download:hover {
+    background: #333;
+    transform: translateY(-1px);
+}
+.titulo-linha {
+    display: flex;
+    align-items: baseline; /* 🔹 alinha exatamente na linha do texto */
+    gap: 8px;
+}
+
+.titulo-linha h1 {
+    margin: 0;
+}
+
+h1 { font-size: 22px; margin-bottom: 4px; }
+.codigo-produto { margin-top: 0; font-size: 14px; }
+
+.acabamento-bloco h3 {
+    font-size: 14px !important;
+    font-weight: normal !important;
+    color: #444 !important;
+    margin: 10px 0 12px !important;
+}
+
+.acabamentos-grid {
+    display: grid;
+    grid-template-columns: repeat(10, minmax(80px, 1fr));
+    gap: 8px;
+    width: 100%;
+    padding: 10px 0;
+}
+
+.card {
+    background: #fff;
+    border-radius: 0;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 180px;
+    overflow: hidden;
+    position: relative;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+}
+
+.card img { width: 100%; height: 60px; object-fit: cover; margin-bottom: 8px; }
+
+.status-icon { position: absolute; width: 24px; height: 24px; pointer-events: none; }
+
+.acab-nome {
+    font-weight: bold;
+    font-size: 10px;
+    margin-bottom: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal;
+    text-align: left;
+    line-height: 1.1;
+    min-height: 22px;
+    max-height: 22px;
+}
+
+.status { font-size: 10px; font-weight: bold; margin: 2px 0; text-align: left; }
+.status.ativo { color: green; }
+.status.indisponivel { color: red; }
+.status.suspenso { color: #D4A017; }
+
+.status-data { font-size: 9px; font-weight: bold; margin: 1px 0 4px 0; min-height: 12px; }
+
+.meta { font-size: 8px; margin: 1px 0; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.meta.comp { font-size: 7px; white-space: normal; line-height: 1.1; max-height: 2.2em; overflow: hidden; }
+.meta.restricao { font-size: 10px; font-weight: bold; overflow: hidden; white-space: normal; text-overflow: ellipsis; line-height: 1.2; max-height: 2.4em; }
+
+.informacao-complementar { color: red; }
+
+.data-atualizacao { text-align: center; margin-top: 24px; font-size: 12px; color: #666; }
+
+.filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 22px;
+    margin: 15px 0;
+    align-items: center;
+}
+
+.multiselect {
+    position: relative;
+    width: 150px;
+}
+
+.selectBox {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    border-radius: 25px;
+    border: none;
+    background: linear-gradient(135deg, #ffffff, #f7f7f7);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    cursor: pointer;
+    font-size: 13px;
+    user-select: none;
+}
+
+.selectBox:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.2); }
+
+.checkboxes {
+    display: none;
+    position: absolute;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    padding: 10px;
+    top: 40px;
+    left: 0;
+    z-index: 10;
+    max-height: 200px;
+    overflow-y: auto;
+    width: 100%;
+}
+
+.checkboxes label {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+
+.checkboxes input[type="checkbox"] {
+    margin-right: 8px;
+    width: 14px;
+    height: 14px;
+}
+
+#checkboxes-status label { text-transform: uppercase; }
+
+.btn-aplicar {
+    padding: 4px 12px;
+    font-size: 11px;
+    border-radius: 20px;
+    border: none;
+    background: #000;
+    color: #fff;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: all 0.2s ease;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+.btn-aplicar:hover { background: #333; }
+
+.input-pesquisa {
+    width: 150px;
+    padding: 6px 12px;
+    border-radius: 25px;
+    border: none;
+    background: linear-gradient(135deg, #ffffff, #f7f7f7);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    font-size: 13px;
+}
+.input-pesquisa:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+}
+
+/* RESPONSIVIDADE */
+@media (max-width: 768px) {
+    body { padding: 10px; }
+    h1 { font-size: 20px; }
+    .card { min-height: auto; }
+    .card img { height: auto; }
+    .acabamentos-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 8px;
+    }
+    .btn-aplicar, .input-pesquisa, .selectBox { font-size: 12px; padding: 5px; }
+}
+
+@media (max-width: 480px) {
+    h1 { font-size: 18px; }
+    .acabamentos-grid { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
+    .card img { height: 100px; }
+}
+/* ===== AJUSTES EXCLUSIVOS PARA PDF ===== */
+@media print {
+
+    /* ===== CONFIGURAÇÃO DA PÁGINA ===== */
+    @page {
+        size: A4;
+        margin: 15mm;
+    }
+
+    /* ===== ESCONDER ELEMENTOS DA WEB ===== */
+    .filtros,
+    .btn-download,
+    .voltar-topo {
+        display: none !important;
+    }
+
+    /* ===== BODY ===== */
+    body {
+        background: #fff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+/* ===== AJUSTE LOGO E TÍTULO ===== */
+.logo {
+    top: 0 !important;
+    margin-bottom: 20px !important; /* 🔹 ESPAÇO ENTRE LOGO E TÍTULO */
+}
+
+/* ===== AJUSTE REAL ENTRE LOGO E TÍTULO ===== */
+h1 {
+    margin-top: 0 !important;
+    padding-top: 40px !important; /* ← CRIA ESPAÇO ABAIXO DO LOGO */
+}
+
+.codigo-produto {
+    margin-top: 4px !important;
+}
+
+    /* ===== GRID ALINHADO À ESQUERDA ===== */
+    .acabamentos-grid {
+        grid-template-columns: repeat(6, 106px) !important;
+        gap: 6px !important;
+        justify-content: start !important;
+        margin-left: 0 !important;
+        margin-right: auto !important;
+    }
+
+    /* ===== CARD ===== */
+    .card {
+        page-break-inside: avoid;
+        break-inside: avoid;
+
+        width: 106px !important;
+        min-width: 106px !important;
+        max-width: 106px !important;
+
+        padding: 6px !important;
+
+        border: 0.5px solid #000 !important;
+        border-radius: 2px !important;
+        box-shadow: none !important;
+        background: #fff !important;
+    }
+
+    /* ===== BLOCO DE ACABAMENTO ===== */
+    .acabamento-bloco {
+        margin-bottom: 16px !important;
+    }
+
+    /* ===== TÍTULO DO ACABAMENTO ===== */
+    .acabamento-bloco h3 {
+        margin-top: 12px !important;
+        margin-bottom: 6px !important;
+        page-break-after: avoid;
+    }
+
+    /* ===== IMAGEM ===== */
+    .card img {
+        height: 70px !important;
+        margin-bottom: 4px !important;
+        display: block !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+
+    /* ===== TEXTOS ===== */
+    .acab-nome {
+        font-size: 9px !important;
+        line-height: 1.1 !important;
+        min-height: 18px !important;
+        max-height: 18px !important;
+    }
+
+    .status {
+        font-size: 8px !important;
+        margin: 1px 0 !important;
+    }
+
+    .status-data {
+        font-size: 7px !important;
+        min-height: 10px !important;
+        margin: 0 0 2px 0 !important;
+    }
+
+    .meta {
+        font-size: 7px !important;
+        line-height: 1.1 !important;
+        margin: 1px 0 !important;
+    }
+
+    .meta.comp {
+        font-size: 6.5px !important;
+        max-height: 2em !important;
+        overflow: hidden !important;
+    }
+
+    .meta.restricao {
+        font-size: 8px !important;
+        max-height: 2.2em !important;
+    }
+
+    .informacao-complementar {
+        font-size: 7px !important;
+    }
+}
+/* ===== ÍCONE INDISPONÍVEL (PDF) ===== */
+.status-icon {
+    display: block !important;
+    position: absolute !important;
+    z-index: 10 !important;
+}
+
+.status-icon svg {
+    display: block !important;
+    width: 24px !important;
+    height: 24px !important;
+}
+.zoom-img {
+    cursor: pointer;
+}
+/* ===== ÍCONE + PARA ZOOM ===== */
+.zoom-plus {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+
+    background: none;
+    border-radius: 0;
+    width: auto;
+    height: auto;
+
+    color: #fff;
+    font-size: 22px;
+    font-weight: 300;
+    line-height: 1;
+
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+/* aparece ao passar o mouse */
+.card:hover .zoom-plus {
+    opacity: 1;
+}
+
+/* no celular fica sempre visível */
+@media (max-width: 768px) {
+    .zoom-plus {
+        opacity: 1;
+    }
+}
+
+</style>
+</head>
+<body>
+<div class="container">
+
+<img src="{{ url_for('static', filename='LOGO CLAMI.png') }}" alt="Logo" class="logo">
+
+
+<a href="/" class="voltar-topo" title="Voltar">
+    <svg width="20" height="20"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" fill="none"></path></svg>
+</a>
+
+<div class="titulo-linha">
+    <h1>{{ nome }}</h1>
+
+    <a href="{{ url_for('download', nome=nome) }}"
+   class="btn-download"
+   title="Download PDF"
+   download>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+    </a>
+</div>
+
+<p class="codigo-produto">Código: {{ fornecedor }}</p>
+
+
+
+<div>
+    {% for img in imagens_produto %}
+        <img src="{{ img }}" style="max-width:350px; margin:6px; border-radius:4px;">
+    {% endfor %}
+</div>
+
+<!-- FILTROS -->
+<div class="filtros">
+    <div class="multiselect">
+        <div class="selectBox" onclick="toggleCheckboxes('acabamento')">Acabamento</div>
+        <div class="checkboxes" id="checkboxes-acabamento">
+            <label><input type="checkbox" value="todos" onclick="selecionarTodos(this,'acabamento')"> Todos</label>
+            {% for acabamento in acabamentos_lista %}
+            <label><input type="checkbox" value="{{ acabamento }}" onclick="selecionarAcabamento(this)"> {{ acabamento }}</label>
+            {% endfor %}
+            <button class="btn-aplicar" onclick="aplicarFiltro('acabamento')">Aplicar Filtro</button>
+        </div>
+    </div>
+
+    <div class="multiselect">
+        <div class="selectBox" onclick="toggleCheckboxes('status')">Status</div>
+        <div class="checkboxes" id="checkboxes-status">
+            <label><input type="checkbox" value="todos" onclick="selecionarTodos(this,'status')"> Todos</label>
+            {% for status in status_coletados %}
+            <label><input type="checkbox" value="{{ status|lower }}"> {{ status }}</label>
+            {% endfor %}
+            <button class="btn-aplicar" onclick="aplicarFiltro('status')">Aplicar Filtro</button>
+        </div>
+    </div>
+
+    <input type="text" id="pesq-acab" class="input-pesquisa" placeholder="Pesquisar acabamento" onkeyup="filtrarPesquisaLivre()">
+</div>
+
+<div id="blocosAcabamentos">
+    {% for acabamento in acabamentos_lista %}
+    <div class="acabamento-bloco" data-acab-grupo="{{ acabamento }}">
+        <h3>{{ acabamento }}</h3>
+        <div class="acabamentos-grid">
+            {% for categoria, lista in categorias.items() %}
+                {% for item in lista %}
+                    {% if item.ACABAMENTO == acabamento and item.IMG %}
+                    <div class="card" data-status="{{ (item.STATUS or '')|lower }}" data-acab="{{ item.ACABAMENTO|lower }}" data-tipo="{{ item.TIPO|lower }}">
+                        {% if item.STATUS and item.STATUS|lower == 'indisponivel' %}
+                        <div class="status-icon" style="top:30px; left:50%; transform: translateX(-50%);">
+                            <svg viewBox="0 0 24 24" width="24" height="24">
+                                <circle cx="12" cy="12" r="10" stroke="red" stroke-width="2" fill="none"/>
+                                <line x1="6" y1="18" x2="18" y2="6" stroke="red" stroke-width="2"/>
+                            </svg>
+                        </div>
+                        {% endif %}
+                        <div style="position: relative;">
+    <img src="{{ item.IMG }}" alt="{{ item.TIPO }}" class="zoom-img">
+    <div class="zoom-plus">+</div>
+</div>
+                        <div style="margin-top: 8px;">
+                            <div class="acab-nome">{{ item.TIPO }}</div>
+                            {% if item.STATUS %}
+                            <div class="status" style="color: {{ item.STATUS_COR }};">{{ item.STATUS }}</div>
+                            {% endif %}
+                            <div class="status-data" style="color: {{ item.STATUS_COR }};">{{ item.STATUS_DATA or '' }}</div>
+                            {% if item.COMP %}<div class="meta comp"><strong>Comp.:</strong> {{ item.COMP }}</div>{% endif %}
+                            {% if item.RESTR %}<div class="meta restricao">{{ item.RESTR }}</div>{% endif %}
+                            {% if item.INFO %}<div class="meta"><strong>Info:</strong> <span class="informacao-complementar">{{ item.INFO }}</span></div>{% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="data-atualizacao">Atualizado em {{ ultima_modificacao }}</div>
+
+<div style="text-align: left; margin-top: 30px;">
+    <a href="/" class="voltar-topo" title="Voltar">
+        <svg width="20" height="20"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" fill="none"></path></svg>
+    </a>
+</div>
+
+</div>
+</div>
+
+<!-- MODAL ZOOM IMAGEM -->
+<div id="zoomModal" style="
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.9);
+    z-index:99999;
+
+    align-items:center;
+    justify-content:center;
+">
+
+
+    <span id="zoomClose" style="
+        position:absolute;
+        top:20px;
+        right:30px;
+        font-size:40px;
+        color:#fff;
+        cursor:pointer;
+    ">&times;</span>
+
+    <img id="zoomImg" style="
+    max-width:90%;
+    max-height:90%;
+    object-fit:contain;
+">
+
+</div>
+
+<script>
+function toggleCheckboxes(tipo){
+    const cb = document.getElementById('checkboxes-' + tipo);
+    cb.style.display = cb.style.display === 'block' ? 'none' : 'block';
+}
+document.addEventListener('click', function(e){
+    if(!e.target.closest('.multiselect')) {
+        document.querySelectorAll('.checkboxes').forEach(cb=>cb.style.display='none');
+    }
+});
+
+function selecionarTodos(checkbox, tipo) {
+    const lista = document.querySelectorAll('#checkboxes-' + tipo + ' input[type="checkbox"]');
+    lista.forEach(cb => { if(cb.value !== 'todos') cb.checked = checkbox.checked; });
+}
+
+function selecionarAcabamento(cb) {
+    const todos = document.querySelector('#checkboxes-acabamento input[value="todos"]');
+    if(cb.checked) todos.checked = false;
+}
+
+function aplicarFiltro(tipo){
+    const selAcab = Array.from(document.querySelectorAll('#checkboxes-acabamento input:checked'))
+                        .map(i=>i.value.toLowerCase()).filter(v=>v!=='todos');
+    const selStatus = Array.from(document.querySelectorAll('#checkboxes-status input:checked'))
+                        .map(i=>i.value.toLowerCase()).filter(v=>v!=='todos');
+
+    filtrar(selAcab, selStatus);
+    document.getElementById('checkboxes-' + tipo).style.display = 'none';
+}
+
+function filtrarPesquisaLivre() {
+    const texto = document.getElementById("pesq-acab").value.toLowerCase();
+    filtrar([], [], texto);
+}
+
+function filtrar(selAcab = [], selStatus = [], textoLivre = "") {
+    document.querySelectorAll('#blocosAcabamentos .acabamento-bloco').forEach(bloco=>{
+        let mostrarBloco = false;
+
+        bloco.querySelectorAll('.card').forEach(card=>{
+            const cardAcab = card.dataset.acab;
+            const cardStatus = card.dataset.status;
+            const cardTipo = card.dataset.tipo;
+
+            let mostrar = true;
+            if(selAcab.length && !selAcab.includes(cardAcab)) mostrar = false;
+            if(selStatus.length && !selStatus.includes(cardStatus)) mostrar = false;
+            if(textoLivre && !cardTipo.includes(textoLivre)) mostrar = false;
+
+            card.style.display = mostrar ? '' : 'none';
+            if(mostrar) mostrarBloco = true;
+        });
+
+        bloco.style.display = mostrarBloco ? '' : 'none';
+    });
+
+}
+// ZOOM IMAGEM
+document.querySelectorAll('.zoom-img').forEach(img => {
+    img.addEventListener('click', function (e) {
+        e.stopPropagation();
+        document.getElementById('zoomModal').style.display = 'flex';
+        document.getElementById('zoomImg').src = this.src;
+    });
+});
+
+document.getElementById('zoomClose').onclick = function (e) {
+    e.stopPropagation();
+    document.getElementById('zoomModal').style.display = 'none';
+};
+
+document.getElementById('zoomModal').onclick = function () {
+    this.style.display = 'none';
+};
+</script>
+
+</body>
+</html>

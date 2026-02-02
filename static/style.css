@@ -1,0 +1,84 @@
+/* GRID COM 10 CARDS POR LINHA E SEM SCROLL */
+.acabamentos-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr); 
+    gap: 10px;
+    width: 100%;
+    padding: 10px 0;
+    overflow: hidden;   /* impede scroll horizontal */
+}
+
+/* --- CARD --- */
+.card {
+    background: #fff;
+    border-radius: 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    padding: 8px;
+    border: 1px solid #eee;
+
+    width: 100%;
+    height: 180px;       /* ALTURA FIXA — menor */
+    box-sizing: border-box;
+    overflow: hidden;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+/* --- IMAGEM MENOR (NÃO CORTA MAIS NADA) --- */
+.card img {
+    width: 100%;
+    height: 70px;      /* ↓ imagem menor */
+    object-fit: cover;
+    border-radius: 0;
+    flex-shrink: 0;
+    margin-bottom: 6px;
+}
+
+
+/* TÍTULO */
+.acab-nome {
+    font-weight: bold;
+    font-size: 11px;
+    margin: 4px 0 2px;
+
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-align: center;
+}
+
+/* STATUS */
+.status {
+    font-size: 10px;
+    margin: 1px 0;
+    text-align: center;
+}
+
+/* METAS */
+.meta {
+    font-size: 10px;
+    margin: 1px 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-align: center;
+}
+
+/* RESPONSIVO */
+@media (max-width: 1200px) {
+    .acabamentos-grid { grid-template-columns: repeat(8, 1fr); }
+}
+
+@media (max-width: 900px) {
+    .acabamentos-grid { grid-template-columns: repeat(6, 1fr); }
+}
+
+@media (max-width: 700px) {
+    .acabamentos-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+@media (max-width: 480px) {
+    .acabamentos-grid { grid-template-columns: repeat(2, 1fr); }
+}
