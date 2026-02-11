@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title if title else "Catálogo Digital" }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<nav style="background:#222; padding:10px;">
+    <a href="/" style="color:white; text-decoration:none; font-size:20px;">
+        Catálogo Digital
+    </a>
+</nav>
+
+<div class="container">
+    {% block content %}{% endblock %}
+</div>
+
+</body>
+</html>
